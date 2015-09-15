@@ -1,21 +1,24 @@
-gulp-release-it
+gulp-shrinkwrap-release
 =============
 
 Provides an automatic way to do a release of your npm modules to Git and publish it to NPM Repository.
 
 ## Usage
-`npm install gulp-release-it --save-dev`
+`npm install gulp-shrinkwrap-release --save-dev`
 
 ```javascript
 var gulp = require('gulp');
-require('gulp-release-it')(gulp);
+require('gulp-shrinkwrap-release')(gulp);
 ```
 
 ## How it works
 
-1. Create a tag based on version specified in package.json
-2. Publish the project to NPM repository 
-2. Bumps the version of package.json, bower.json or/and manifest.json
+1. Checks out a local release branch
+2. Shrinkwraps dependencies
+3. Create a tag based on version specified in package.json
+4. Publish the project to NPM repository
+5. Checks out the original branch
+6. Bumps the version of package.json, bower.json or/and manifest.json
 
 ## How to release
 

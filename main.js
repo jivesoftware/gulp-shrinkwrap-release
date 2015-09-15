@@ -2,21 +2,26 @@ module.exports = function (gulp) {
 
     var argv = require('yargs').argv;
     var bump = require('gulp-bump');
+    var clean = require('gulp-clean');
     var fs = require('fs');
     var git = require('gulp-git');
-    var runSequence = require('gulp-run-sequence');
+    var path = require('path');
     var s = require('string');
+    var shrinkwrap = require('gulp-shrinkwrap');
     var spawn = require('child_process').spawn;
     var tag_version = require('gulp-tag-version');
     var through = require('through2');
     var _ = require('lodash');
 
     var branch = argv.branch || 'master';
-    var rootDir = argv.rootDir || './';
+    var rootDir = path.resolve(argv.rootDir || './');
 
     if (!s(rootDir).endsWith('/')) {
         rootDir = rootDir + '/';
     }
+
+    var pkg = require(rootDir + './package.json');
+    var releaseBranch = 'release-' + pkg.version;
 
     var readPackageVersion = function(filePath) {
         return JSON.parse(fs.readFileSync(filePath, 'utf8')).version;
@@ -36,11 +41,84 @@ module.exports = function (gulp) {
         })
     };
 
-    gulp.task('release', function (cb) {
-        runSequence('tag-and-push', 'npm-publish', 'bump', cb);
+    gulp.task('ensure-clean-workspace', function(cb) {
+        git.status({args: '--porcelain'}, function (err, stdout) {
+            if (err) throw err;
+
+            if (stdout !== '') {
+                cb(new Error('Workspace isn\'t clean, aborting release'));
+            } else {
+                cb();
+            }
+        });
     });
 
-    gulp.task('tag-and-push', function () {
+    gulp.task('checkout-release-branch', ['checkout-workspace'], function(cb) {
+        git.branch(releaseBranch, function(err) {
+            if (err) {
+                cb(err);
+            } else {
+                git.checkout(releaseBranch, function (err) {
+                    if (err) {
+                        cb(err);
+                    } else {
+                        cb();
+                    }
+                });
+            }
+        });
+    });
+
+    function checkoutWorkspace(cb) {
+        git.checkout(branch, function (err) {
+            if (err) {
+                cb(err);
+            } else {
+                cb();
+            }
+        });
+    }
+
+    gulp.task('checkout-workspace', ['ensure-clean-workspace'], checkoutWorkspace);
+    gulp.task('restore-workspace', ['npm-publish'], function(cb) {
+        checkoutWorkspace(function(err) {
+            if (err) {
+                cb(err);
+            } else {
+                git.branch(releaseBranch, {args: '-D'}, function(err) {
+                    if (err) {
+                        cb(err);
+                    } else {
+                        cb();
+                    }
+                });
+            }
+        });
+    });
+
+    gulp.task('release', [
+        'ensure-clean-workspace',
+        'checkout-workspace',
+        'checkout-release-branch',
+        'shrinkwrap-and-commit',
+        'tag-and-push',
+        'npm-publish',
+        'restore-workspace',
+        'bump'
+    ]);
+
+    gulp.task('shrinkwrap-and-commit', ['checkout-release-branch'],
+        function() {
+            return gulp.src('package.json')
+                .pipe(shrinkwrap())
+                .pipe(gulp.dest('./'))
+                // Add & Commit npm-shrinkwrap.json
+                .pipe(git.add())
+                .pipe(git.commit('Added npm-shrinkwrap.json'));
+        }
+    );
+
+    gulp.task('tag-and-push', ['shrinkwrap-and-commit'], function () {
         var pkg = require(rootDir + './package.json');
 
         return gulp.src('./', {cwd: rootDir})
@@ -60,7 +138,7 @@ module.exports = function (gulp) {
         return 'patch';
     };
 
-    gulp.task('bump', function () {
+    gulp.task('bump', ['restore-workspace'], function () {
         gulp.src(paths.versionsToBump, {cwd: rootDir})
             .pipe(bump({type: versioning()}))
             .pipe(gulp.dest('./', {cwd: rootDir}))
@@ -68,7 +146,7 @@ module.exports = function (gulp) {
             .pipe(git.push('origin', branch, {cwd: rootDir}));
     });
 
-    gulp.task('npm-publish', function (done) {
+    gulp.task('npm-publish', ['tag-and-push'], function (done) {
         spawn('npm', ['publish', rootDir], {stdio: 'inherit'}).on('close', done);
     });
 
