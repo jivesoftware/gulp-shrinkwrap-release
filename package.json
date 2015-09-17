@@ -6,7 +6,7 @@
     "Ghislain Seguin <ghislain@gmail.com>"
   ],
   "repository": "git@github.com:jivesoftware/gulp-shrinkwrap-release.git",
-  "version": "2.0.1",
+  "version": "2.0.2",
   "main": "main.js",
   "dependencies": {
     "gulp-bump": "0.3.1",
