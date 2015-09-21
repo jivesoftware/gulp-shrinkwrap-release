@@ -109,7 +109,7 @@ module.exports = function (gulp) {
     ]);
 
     gulp.task('npm-prune', ['checkout-release-branch'], function (done) {
-        spawn('npm', ['prune', '--production'], {stdio: 'inherit'}).on('close', done);
+        spawn('npm', ['prune'], {stdio: 'inherit'}).on('close', done);
     });
 
     gulp.task('shrinkwrap-and-commit', ['npm-prune'],
