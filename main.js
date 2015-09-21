@@ -5,6 +5,7 @@ module.exports = function (gulp) {
     var clean = require('gulp-clean');
     var fs = require('fs');
     var git = require('gulp-git');
+    var gutil = require('gulp-util');
     var path = require('path');
     var s = require('string');
     var shrinkwrap = require('gulp-shrinkwrap');
