@@ -100,6 +100,7 @@ module.exports = function (gulp) {
         'ensure-clean-workspace',
         'checkout-workspace',
         'checkout-release-branch',
+        'npm-prune',
         'shrinkwrap-and-commit',
         'tag-and-push',
         'npm-publish',
@@ -107,7 +108,11 @@ module.exports = function (gulp) {
         'bump'
     ]);
 
-    gulp.task('shrinkwrap-and-commit', ['checkout-release-branch'],
+    gulp.task('npm-prune', ['checkout-release-branch'], function (done) {
+        spawn('npm', ['prune', rootDir], {stdio: 'inherit'}).on('close', done);
+    });
+
+    gulp.task('shrinkwrap-and-commit', ['npm-prune'],
         function() {
             return gulp.src('package.json')
                 .pipe(shrinkwrap())
