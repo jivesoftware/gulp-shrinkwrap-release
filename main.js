@@ -157,6 +157,7 @@ module.exports = function (gulp) {
             spawn('npm', ['publish', rootDir], {stdio: 'inherit'}).on('close', done);
         } else {
             gutil.log('Package is marked private, skipping publishing to npm');
+            done();
         }
     });
 
